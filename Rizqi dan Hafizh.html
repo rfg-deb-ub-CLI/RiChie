@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulator TCP 3-Way Handshake (Drive-Thru)</title>
+
+    <style>
+        :root {
+            /* WARNA UTAMA - LEBIH CERAH */
+            --bg-color: #f0f9ff;
+            --card-bg: #ffffff;
+            --border-color: #bae6fd;
+
+            --text-main: #172554;
+            --text-muted: #475569;
+
+            --accent-blue: #0284c7;
+            --accent-green: #16a34a;
+            --accent-yellow: #eab308;
+            --accent-red: #ef4444;
+            --accent-purple: #9333ea;
+
+            --blue-light: #e0f2fe;
+            --green-light: #dcfce7;
+            --yellow-light: #fef9c3;
+            --purple-light: #f3e8ff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background:
+                linear-gradient(135deg, #e0f2fe, #f8fafc, #ecfeff);
+            color: var(--text-main);
+            padding: 20px;
+            line-height: 1.5;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        /* HEADER */
+        header {
+            text-align: center;
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #ffffff;
+            border: 2px solid #bae6fd;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(2, 132, 199, 0.12);
+        }
+
+        header h1 {
+            color: #0369a1;
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        /* STEPPER */
+        .stepper-banner {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .step-card {
+            background: #ffffff;
+            border: 2px solid #cbd5e1;
+            border-radius: 10px;
+            padding: 12px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: #64748b;
+            transition: 0.3s ease;
+            box-shadow: 0 3px 8px rgba(15, 23, 42, 0.08);
+        }
+
+        .step-card small {
+            color: #64748b;
+        }
+
+        .step-card.active {
+            border-color: #0284c7;
+            background: #e0f2fe;
+            color: #075985;
+            font-weight: bold;
+            box-shadow: 0 0 15px rgba(2, 132, 199, 0.25);
+            transform: translateY(-2px);
+        }
+
+        .step-card.active small {
+            color: #0369a1;
+        }
+
+        /* CLIENT & SERVER */
+        .sim-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .node-card {
+            background: #ffffff;
+            border: 2px solid #cbd5e1;
+            border-radius: 14px;
+            padding: 18px;
+            text-align: center;
+            box-shadow: 0 5px 12px rgba(15, 23, 42, 0.08);
+            transition: 0.3s;
+        }
+
+        .node-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+        }
+
+        .node-header {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            color: #1e293b;
+        }
+
+        /* STATUS */
+        .state-badge {
+            display: inline-block;
+            padding: 5px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            background: #fef3c7;
+            color: #92400e;
+            margin-bottom: 10px;
+            border: 1px solid #fcd34d;
+        }
+
+        /* CHAT */
+        .chat-bubble {
+            background: #f8fafc;
+            border: 2px solid #cbd5e1;
+            border-radius: 10px;
+            padding: 12px;
+            font-size: 0.85rem;
+            color: #0369a1;
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 1px 3px rgba(15, 23, 42, 0.05);
+        }
+
+        /* NETWORK AREA */
+        .network-area {
+            position: relative;
+            height: 140px;
+            background:
+                linear-gradient(
+                    90deg,
+                    #eff6ff,
+                    #ffffff,
+                    #ecfdf5
+                );
+            border: 2px dashed #94a3b8;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 50px;
+            box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
+        }
+
+        .cable {
+            position: absolute;
+            top: 50%;
+            left: 60px;
+            right: 60px;
+            height: 6px;
+            background: linear-gradient(
+                90deg,
+                #38bdf8,
+                #94a3b8,
+                #4ade80
+            );
+            transform: translateY(-50%);
+            z-index: 1;
+            border-radius: 10px;
+        }
+
+        .network-area > div:not(.cable):not(.signal-item) {
+            z-index: 4 !important;
+            background: #ffffff;
+            border-radius: 50%;
+            padding: 5px;
+            box-shadow: 0 3px 10px rgba(15, 23, 42, 0.15);
+        }
+
+        /* SIGNAL */
+        .signal-item {
+            position: absolute;
+            top: calc(50% - 18px);
+            padding: 7px 15px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: #ffffff;
+            z-index: 3;
+            box-shadow: 0 3px 15px rgba(15, 23, 42, 0.25);
+            white-space: nowrap;
+            border: 2px solid rgba(255,255,255,0.7);
+        }
+
+        /* BUTTON AREA */
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: #0284c7;
+            color: #ffffff;
+            font-weight: bold;
+            border: none;
+            padding: 11px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.2s ease;
+            box-shadow: 0 4px 8px rgba(15, 23, 42, 0.15);
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(15, 23, 42, 0.2);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        /* LOG */
+        .log-box {
+            background: #ffffff;
+            border: 2px solid #cbd5e1;
+            border-radius: 10px;
+            padding: 15px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: 'Consolas', monospace;
+            font-size: 0.85rem;
+            box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
+        }
+
+        .log-entry {
+            margin-bottom: 8px;
+            border-bottom: 1px dotted #cbd5e1;
+            padding-bottom: 6px;
+        }
+
+        .log-step {
+            color: #b45309;
+            font-weight: bold;
+        }
+
+        .log-analogy {
+            color: #0369a1;
+            font-style: italic;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 700px) {
+
+            body {
+                padding: 10px;
+            }
+
+            .sim-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stepper-banner {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .network-area {
+                height: 120px;
+                padding: 0 20px;
+            }
+
+            .signal-item {
+                font-size: 0.65rem;
+                padding: 5px 8px;
+            }
+
+            .cable {
+                left: 45px;
+                right: 45px;
+            }
+
+            header h1 {
+                font-size: 1.4rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <header>
+        <h1>🚦 Simulator TCP 3-Way Handshake</h1>
+        <p>Analogi Kehidupan Sehari-hari: Pesan Makanan via Drive-Thru</p>
+    </header>
+
+    <!-- STEPPER -->
+    <div class="stepper-banner">
+        <div class="step-card" id="st1">
+            1. SYN<br>
+            <small>(Tanya: Loket Buka?)</small>
+        </div>
+
+        <div class="step-card" id="st2">
+            2. SYN-ACK<br>
+            <small>(Jawab: Buka! Siap Pesan?)</small>
+        </div>
+
+        <div class="step-card" id="st3">
+            3. ACK<br>
+            <small>(Konfirmasi Siap)</small>
+        </div>
+
+        <div class="step-card" id="st4">
+            4. TERHUBUNG<br>
+            <small>(Proses Data)</small>
+        </div>
+    </div>
+
+    <!-- CLIENT & SERVER -->
+    <div class="sim-grid">
+
+        <div class="node-card">
+            <div class="node-header">
+                🚗 Pembeli (Client / Pengirim)
+            </div>
+
+            <div class="state-badge" id="budiState">
+                MOBIL BERHENTI (CLOSED)
+            </div>
+
+            <div class="chat-bubble" id="budiTalk">
+                <i>Belum memanggil loket...</i>
+            </div>
+        </div>
+
+        <div class="node-card">
+            <div class="node-header">
+                🎧 Kasir (Server / Penerima)
+            </div>
+
+            <div class="state-badge" id="roniState">
+                MENUNGGU MOBIL (LISTEN)
+            </div>
+
+            <div class="chat-bubble" id="roniTalk">
+                <i>Menunggu pelanggan di speaker...</i>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- NETWORK -->
+    <div class="network-area" id="netTrack">
+
+        <div class="cable"></div>
+
+        <div style="font-size:1.8rem;">
+            🚗
+        </div>
+
+        <div style="font-size:1.8rem;">
+            🎙️
+        </div>
+
+    </div>
+
+    <!-- CONTROLS -->
+    <div class="controls">
+
+        <button
+            class="btn"
+            id="btnStep"
+            onclick="handleStep()">
+            1. Panggil Kasir (Kirim SYN)
+        </button>
+
+        <button
+            class="btn"
+            id="btnData"
+            style="
+                background:#9333ea;
+                color:#fff;
+                display:none;
+            "
+            onclick="kirimObrolan()">
+            🍔 Kirim Pesanan Makanan
+        </button>
+
+        <button
+            class="btn"
+            style="
+                background:#64748b;
+                color:#fff;
+            "
+            onclick="resetSim()">
+            🔄 Reset Simulator
+        </button>
+
+    </div>
+
+    <!-- LOG -->
+    <div class="log-box" id="logBox">
+
+        <div class="log-entry">
+            <i>
+                [Sistem Siap] Klik tombol
+                "1. Panggil Kasir" untuk memulai proses Drive-Thru.
+            </i>
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+
+    let currentStep = 0;
+    let chatCount = 0;
+
+
+    /* ==========================================
+       STEPPER
+    ========================================== */
+
+    function setActiveStep(stepNum) {
+
+        for (let i = 1; i <= 4; i++) {
+
+            document
+                .getElementById(`st${i}`)
+                .classList
+                .remove('active');
+
+        }
+
+        if (stepNum > 0) {
+
+            document
+                .getElementById(`st${stepNum}`)
+                .classList
+                .add('active');
+
+        }
+    }
+
+
+    /* ==========================================
+       TCP 3-WAY HANDSHAKE
+    ========================================== */
+
+    function handleStep() {
+
+        const btn =
+            document.getElementById('btnStep');
+
+
+        /* STEP 1 - SYN */
+
+        if (currentStep === 0) {
+
+            currentStep = 1;
+
+            setActiveStep(1);
+
+            document
+                .getElementById('budiState')
+                .innerText =
+                'MEMANGGIL LOKET... (SYN-SENT)';
+
+            document
+                .getElementById('budiTalk')
+                .innerText =
+                '"Halo, Saya ingin Memesan"';
+
+
+            sendSignal(
+                'SYN ("Halo, Saya ingin Memesan")',
+                'left-to-right',
+                '#0284c7',
+                () => {
+
+                    document
+                        .getElementById('roniState')
+                        .innerText =
+                        'MEMBUKA SALURAN (SYN-RECEIVED)';
+
+                    document
+                        .getElementById('roniTalk')
+                        .innerText =
+                        'Mendengar panggilan pemesan...';
+
+
+                    log(
+                        '[STEP 1 - SYN] Pemesan mengirim sinyal SYN.',
+                        'Pemesan: "Halo, Saya ingin Memesan"'
+                    );
+
+
+                    btn.innerText =
+                        '2. Kasir Menjawab (Kirim SYN-ACK)';
+
+                }
+            );
+
+        }
+
+
+        /* STEP 2 - SYN-ACK */
+
+        else if (currentStep === 1) {
+
+            currentStep = 2;
+
+            setActiveStep(2);
+
+            document
+                .getElementById('roniTalk')
+                .innerText =
+                '"Ya, ingin Memesan apa?"';
+
+
+            sendSignal(
+                'SYN-ACK ("Ya, ingin Memesan apa?")',
+                'right-to-left',
+                '#eab308',
+                () => {
+
+                    document
+                        .getElementById('budiTalk')
+                        .innerText =
+                        'Mendengar tanggapan Kasir...';
+
+
+                    log(
+                        '[STEP 2 - SYN-ACK] Kasir membalas sinyal SYN-ACK.',
+                        'Kasir: "Ya, ingin Memesan apa?"'
+                    );
+
+
+                    btn.innerText =
+                        '3. Pemesan Sebutkan Pesanan (Kirim ACK)';
+
+                }
+            );
+
+        }
+
+
+        /* STEP 3 - ACK */
+
+        else if (currentStep === 2) {
+
+            currentStep = 3;
+
+            setActiveStep(3);
+
+            document
+                .getElementById('budiTalk')
+                .innerText =
+                '"Saya ingin memesan 1 Minuman Cola dan 1 Burger"';
+
+
+            sendSignal(
+                'ACK ("1 Cola & 1 Burger")',
+                'left-to-right',
+                '#16a34a',
+                () => {
+
+                    document
+                        .getElementById('budiState')
+                        .innerText =
+                        'TERHUBUNG (ESTABLISHED)';
+
+                    document
+                        .getElementById('roniState')
+                        .innerText =
+                        'TERHUBUNG (ESTABLISHED)';
+
+                    document
+                        .getElementById('roniTalk')
+                        .innerText =
+                        '"Baik, 1 cola dan 1 burger totalnya Rp 34.000"';
+
+
+                    setActiveStep(4);
+
+
+                    log(
+                        '[STEP 3 - ACK] Pemesan mengonfirmasi rincian pesanan. KONEKSI TERBENTUK!',
+                        'Pemesan: "Saya ingin memesan 1 Minuman Cola dan 1 Burger"'
+                    );
+
+
+                    log(
+                        '[KONEKSI ESTABLISHED]',
+                        'Kasir: "Baik, 1 cola dan 1 burger totalnya Rp 34.000"'
+                    );
+
+
+                    btn.style.display =
+                        'none';
+
+                    document
+                        .getElementById('btnData')
+                        .style.display =
+                        'inline-block';
+
+                }
+            );
+
+        }
+
+    }
+
+
+    /* ==========================================
+       DATA SETELAH CONNECTION
+    ========================================== */
+
+    function kirimObrolan() {
+
+        chatCount++;
+
+
+        const pesan =
+            chatCount === 1
+                ? 'Bisa bayar pakai QRIS?'
+                : 'Oke, transaksi selesai!';
+
+
+        document
+            .getElementById('budiTalk')
+            .innerText =
+            `"${pesan}"`;
+
+
+        log(
+            `[KIRIM DATA] Pemesan mengirim pesan tambahan: "${pesan}"`,
+            'Pengiriman terjamin: Kasir mendengarkan pesan.'
+        );
+
+
+        sendSignal(
+            `DATA: "${pesan}"`,
+            'left-to-right',
+            '#9333ea',
+            () => {
+
+                document
+                    .getElementById('roniTalk')
+                    .innerText =
+                    `Menerima: "${pesan}"`;
+
+
+                log(
+                    '[KONFIRMASI DATA / ACK] Kasir mengonfirmasi data diterima.',
+                    `Kasir: Baik, pesan '${pesan}' sudah dikonfirmasi!`
+                );
+
+
+                sendSignal(
+                    'ACK ("Pesan Diterima")',
+                    'right-to-left',
+                    '#16a34a',
+                    () => {
+
+                        document
+                            .getElementById('budiTalk')
+                            .innerText =
+                            'OK Terima Kasih';
+
+                    }
+                );
+
+            }
+        );
+
+    }
+
+
+    /* ==========================================
+       ANIMASI SIGNAL
+    ========================================== */
+
+    function sendSignal(
+        label,
+        direction,
+        color,
+        callback
+    ) {
+
+        const track =
+            document.getElementById('netTrack');
+
+
+        const signal =
+            document.createElement('div');
+
+
+        signal.className =
+            'signal-item';
+
+        signal.innerText =
+            label;
+
+        signal.style.background =
+            color;
+
+
+        track.appendChild(signal);
+
+
+        const startX =
+            direction === 'left-to-right'
+                ? 70
+                : track.clientWidth - 220;
+
+
+        const endX =
+            direction === 'left-to-right'
+                ? track.clientWidth - 220
+                : 70;
+
+
+        signal.style.left =
+            startX + 'px';
+
+
+        const startTime =
+            performance.now();
+
+
+        const duration =
+            1300;
+
+
+        function animate(time) {
+
+            const elapsed =
+                time - startTime;
+
+
+            const progress =
+                Math.min(
+                    elapsed / duration,
+                    1
+                );
+
+
+            const currentPos =
+                startX +
+                (endX - startX) *
+                progress;
+
+
+            signal.style.left =
+                currentPos + 'px';
+
+
+            if (progress < 1) {
+
+                requestAnimationFrame(
+                    animate
+                );
+
+            } else {
+
+                signal.remove();
+
+                callback();
+
+            }
+
+        }
+
+
+        requestAnimationFrame(
+            animate
+        );
+
+    }
+
+
+    /* ==========================================
+       LOG
+    ========================================== */
+
+    function log(
+        stepText,
+        analogyText
+    ) {
+
+        const logBox =
+            document.getElementById('logBox');
+
+
+        const entry =
+            document.createElement('div');
+
+
+        entry.className =
+            'log-entry';
+
+
+        entry.innerHTML = `
+            <span class="log-step">
+                ${stepText}
+            </span>
+            <br>
+            <span class="log-analogy">
+                🗣️ Analogi: ${analogyText}
+            </span>
+        `;
+
+
+        logBox.appendChild(entry);
+
+
+        logBox.scrollTop =
+            logBox.scrollHeight;
+
+    }
+
+
+    /* ==========================================
+       RESET
+    ========================================== */
+
+    function resetSim() {
+
+        currentStep = 0;
+        chatCount = 0;
+
+
+        document
+            .getElementById('budiState')
+            .innerText =
+            'MOBIL BERHENTI (CLOSED)';
+
+
+        document
+            .getElementById('roniState')
+            .innerText =
+            'MENUNGGU MOBIL (LISTEN)';
+
+
+        document
+            .getElementById('budiTalk')
+            .innerHTML =
+            '<i>Belum memanggil loket...</i>';
+
+
+        document
+            .getElementById('roniTalk')
+            .innerHTML =
+            '<i>Menunggu pelanggan di speaker...</i>';
+
+
+        const btn =
+            document.getElementById('btnStep');
+
+
+        btn.innerText =
+            '1. Panggil Kasir (Kirim SYN)';
+
+        btn.style.display =
+            'inline-block';
+
+
+        document
+            .getElementById('btnData')
+            .style.display =
+            'none';
+
+
+        setActiveStep(0);
+
+
+        document
+            .getElementById('logBox')
+            .innerHTML = `
+                <div class="log-entry">
+                    <i>
+                        [System Reset]
+                        Transaksi selesai.
+                        Simulator kembali ke awal.
+                    </i>
+                </div>
+            `;
+
+    }
+
+</script>
+
+</body>
+</html>
